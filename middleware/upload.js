@@ -2,7 +2,11 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const uploadDir = path.join(__dirname, "..", "uploads", "resumes");
+// Vercel's filesystem is read-only except /tmp. Locally, keep using
+// the project's uploads folder so nothing changes in dev.
+const uploadDir = process.env.VERCEL
+  ? "/tmp/resumes"
+  : path.join(__dirname, "..", "uploads", "resumes");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
