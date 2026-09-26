@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Create account — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="auth">
+    <div class="auth-ticket">
+        <div class="ticket-head">
+            <a href="/" class="brand"><span class="brand-mark"></span>Prep Tracker</a>
+        </div>
+        <div class="ticket-body">
+            <form action="/register" method="POST" class="auth-form">
+                <h2>Create your account</h2>
+                <p class="lede">Takes less than a minute.</p>
+
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert" role="alert"><%= error %></div>
+                <% } %>
+
+                <div class="field">
+                    <label class="field-label" for="name">Full name</label>
+                    <input type="text" id="name" name="name" placeholder="Jane Doe" autocomplete="name" required>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8">
+                    <p class="help">At least 8 characters, including one number.</p>
+                </div>
+
+                <button type="submit" class="btn block">Create account</button>
+
+                <p class="switch">Already registered? <a href="/login">Log in</a></p>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

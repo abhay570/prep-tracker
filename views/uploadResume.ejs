@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Resume practice — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+    <%- include('partials/sidebar', { active: 'upload' }) %>
+
+    <main class="main">
+        <div class="page-head">
+            <div>
+                <h1>Practice with your resume</h1>
+                <p>Upload your resume and get interview questions built from your own projects, skills and experience.</p>
+            </div>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+
+        <div class="upload-layout">
+            <form action="/resume/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="fields">
+                    <div class="full">
+                        <span class="field-label">Resume file</span>
+                        <label class="drop">
+                            <input type="file" name="resume" id="resume" accept=".pdf,.docx" required>
+                            <strong id="dropTitle">Choose a PDF or DOCX</strong>
+                            <span id="dropHint">Up to 5 MB</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="field-label" for="role">Target role</label>
+                        <input type="text" name="role" id="role" placeholder="e.g. Backend Developer">
+                    </div>
+
+                    <div>
+                        <label class="field-label" for="company">Company (optional)</label>
+                        <input type="text" name="company" id="company" placeholder="e.g. Acme Corp">
+                    </div>
+
+                    <% if (interviews && interviews.length > 0) { %>
+                        <div class="full">
+                            <label class="field-label" for="interviewId">Link to an interview (optional)</label>
+                            <select name="interviewId" id="interviewId">
+                                <option value="">None</option>
+                                <% interviews.forEach(function (iv) { %>
+                                    <option value="<%= iv._id %>"><%= iv.company %> · <%= iv.role %></option>
+                                <% }); %>
+                            </select>
+                            <p class="help">Linked interviews get a Practice shortcut on your dashboard.</p>
+                        </div>
+                    <% } %>
+
+                    <div class="full">
+                        <button type="submit" class="btn" id="submitBtn">Generate questions</button>
+                    </div>
+                </div>
+            </form>
+
+            <ol class="steps">
+                <li>
+                    <h4>Upload your resume</h4>
+                    <p>We read the text from your PDF or DOCX. The file itself is deleted right after.</p>
+                </li>
+                <li>
+                    <h4>Answer the questions</h4>
+                    <p>You get technical, behavioural and project questions based on what's actually on your resume.</p>
+                </li>
+                <li>
+                    <h4>Get your answers checked</h4>
+                    <p>The AI rates each answer out of 10, explains what to improve, and writes a stronger example answer.</p>
+                </li>
+            </ol>
+        </div>
+    </main>
+</div>
+
+<script>
+    var fileInput = document.getElementById('resume');
+    fileInput.addEventListener('change', function () {
+        var f = fileInput.files[0];
+        if (!f) return;
+        document.getElementById('dropTitle').textContent = f.name;
+        document.getElementById('dropHint').textContent = (f.size / 1024 / 1024).toFixed(2) + ' MB. Click to choose a different file.';
+    });
+    document.getElementById('uploadForm').addEventListener('submit', function () {
+        var btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Reading your resume and writing questions...';
+    });
+</script>
+</body>
+</html>

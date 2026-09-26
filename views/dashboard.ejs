@@ -1,0 +1,249 @@
+<%
+    const monthOf = (d) => d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+    const weekdayOf = (d) => d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+    const fullDate = (d) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    const tabUrl = (t) => '/dashboard?tab=' + t + (filters.q ? '&q=' + encodeURIComponent(filters.q) : '');
+    const prepItems = (iv) => [['Resume', iv.resume], ['DSA', iv.dsa], ['OOP', iv.oop], ['DBMS', iv.dbms], ['SQL', iv.sql], ['HR', iv.hr]];
+
+    const firstName = (typeof user !== 'undefined' && user && user.name) ? user.name.trim().split(/\s+/)[0] : 'there';
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+    const when = (n) => n === 0 ? 'today' : (n === 1 ? 'tomorrow' : 'in ' + n + ' days');
+    const awaiting = Math.max(0, stats.completed - stats.selected - stats.rejected);
+
+    // Timeline rows: interviews in order, with a "Today" marker dropped in
+    // where the past ends and the future begins (only when sorted by date).
+    const byDate = filters.sort !== 'readiness_desc';
+    const ascending = filters.sort !== 'date_desc';
+    const showToday = byDate && tab !== 'completed' && interviews.length > 0;
+    const rows = [];
+    let placed = false;
+    interviews.forEach(function (iv) {
+        if (showToday && !placed) {
+            const d = new Date(iv.interviewDate);
+            if (ascending ? d >= today : d < today) { rows.push({ marker: true }); placed = true; }
+        }
+        rows.push({ iv: iv });
+    });
+    if (showToday && !placed) rows.push({ marker: true });
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Interviews — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+    <%- include('partials/sidebar', { active: 'dashboard' }) %>
+
+    <main class="main">
+        <div class="page-head">
+            <div>
+                <h1><%= greeting %>, <%= firstName %></h1>
+                <% if (stats.total === 0) { %>
+                    <p class="tally">Nothing on the board yet. Add your first interview and the prep tracking starts from there.</p>
+                <% } else { %>
+                    <p class="tally">
+                        <b><%= stats.total %></b> tracked,
+                        <b><%= stats.scheduled %></b> upcoming,
+                        <% if (awaiting > 0) { %><b><%= awaiting %></b> awaiting a result,<% } %>
+                        <b><%= stats.selected %></b> selected,
+                        <b><%= stats.rejected %></b> rejected. Average readiness <b><%= stats.avgReadiness %>%</b>.
+                    </p>
+                <% } %>
+            </div>
+            <a href="/add" class="btn">Add interview</a>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+        <% if (typeof notice !== 'undefined' && notice) { %>
+            <div class="notice" role="status"><%= notice %></div>
+        <% } %>
+
+        <% if (nextUp) {
+            const prep = prepItems(nextUp);
+            const missing = prep.filter(function (p) { return !p[1]; });
+            const nextResume = resumeByInterview[nextUp._id.toString()];
+        %>
+            <section class="now" aria-label="Next interview">
+                <div>
+                    <h2 class="now-title"><%= nextUp.company %> interview <%= when(daysUntil) %></h2>
+                    <p class="now-meta"><%= nextUp.role %>, <%= fullDate(new Date(nextUp.interviewDate)) %></p>
+
+                    <ul class="prep" aria-label="Preparation checklist">
+                        <% prep.forEach(function (p) { %>
+                            <li class="<%= p[1] ? 'done' : '' %>"><%= p[0] %></li>
+                        <% }); %>
+                    </ul>
+                    <p class="now-hint">
+                        <% if (missing.length === 0) { %>
+                            Checklist complete. You're ready for this one.
+                        <% } else { %>
+                            <%= missing.length %> of 6 still to prepare: <%= missing.map(function (p) { return p[0]; }).join(', ') %>.
+                        <% } %>
+                    </p>
+                </div>
+
+                <div class="now-actions">
+                    <a href="/edit/<%= nextUp._id %>" class="btn">Update prep</a>
+                    <% if (nextResume) { %>
+                        <a href="/resume/<%= nextResume %>" class="btn ghost">Practice questions</a>
+                    <% } else { %>
+                        <a href="/resume/upload" class="btn ghost">Practice with your resume</a>
+                    <% } %>
+                </div>
+            </section>
+        <% } %>
+
+        <div class="controls">
+            <nav class="tabs" aria-label="Interview lists">
+                <a href="<%= tabUrl('upcoming') %>" class="<%= tab === 'upcoming' ? 'active' : '' %>">Upcoming<span class="count"><%= stats.scheduled %></span></a>
+                <a href="<%= tabUrl('completed') %>" class="<%= tab === 'completed' ? 'active' : '' %>">Completed<span class="count"><%= stats.completed %></span></a>
+                <a href="<%= tabUrl('all') %>" class="<%= tab === 'all' ? 'active' : '' %>">All<span class="count"><%= stats.total %></span></a>
+            </nav>
+
+            <form method="GET" action="/dashboard" class="toolbar">
+                <input type="hidden" name="tab" value="<%= tab %>">
+                <input type="text" name="q" placeholder="Search company or role" value="<%= filters.q %>" aria-label="Search">
+                <select name="sort" aria-label="Sort" onchange="this.form.submit()">
+                    <option value="date_asc" <%= filters.sort === 'date_asc' ? 'selected' : '' %>>Earliest first</option>
+                    <option value="date_desc" <%= filters.sort === 'date_desc' ? 'selected' : '' %>>Latest first</option>
+                    <option value="readiness_desc" <%= filters.sort === 'readiness_desc' ? 'selected' : '' %>>Most ready first</option>
+                </select>
+                <button type="submit" class="btn ghost small">Search</button>
+            </form>
+        </div>
+
+        <% if (interviews.length === 0) { %>
+            <div class="empty">
+                <% if (stats.total === 0) { %>
+                    <h3>No interviews yet</h3>
+                    <p>Add your first interview to start tracking your prep.</p>
+                    <a href="/add" class="btn">Add interview</a>
+                <% } else if (filters.q) { %>
+                    <h3>No matches</h3>
+                    <p>Nothing matches "<%= filters.q %>" in this list.</p>
+                    <a href="/dashboard?tab=<%= tab %>" class="btn ghost">Clear search</a>
+                <% } else if (tab === 'upcoming') { %>
+                    <h3>Nothing scheduled</h3>
+                    <p>Add your next interview so you can track your prep for it.</p>
+                    <a href="/add" class="btn">Add interview</a>
+                <% } else { %>
+                    <h3>Nothing completed yet</h3>
+                    <p>Interviews you mark as complete will show up here.</p>
+                    <a href="/dashboard?tab=upcoming" class="btn ghost">View upcoming</a>
+                <% } %>
+            </div>
+        <% } else { %>
+            <ol class="timeline">
+                <% rows.forEach(function (r) { %>
+                    <% if (r.marker) { %>
+                        <li class="tl-today"><span>Today, <%= fullDate(today) %></span></li>
+                    <% } else {
+                        const iv = r.iv;
+                        const d = new Date(iv.interviewDate);
+                        const isPast = iv.status === 'Scheduled' && d < today;
+                        const rid = resumeByInterview[iv._id.toString()];
+                        const dateInput = d.toISOString().split('T')[0];
+                        const prep = prepItems(iv);
+                        const doneCount = prep.filter(function (p) { return p[1]; }).length;
+                    %>
+                        <li class="tl-item <%= iv.status.toLowerCase() %>">
+                            <details class="entry">
+                                <summary>
+                                    <span class="bib">
+                                        <span class="d"><%= d.getUTCDate() %></span>
+                                        <span class="m"><%= monthOf(d) %></span>
+                                        <span class="w"><%= weekdayOf(d) %></span>
+                                    </span>
+
+                                    <span>
+                                        <span class="e-company" style="display:block"><%= iv.company %></span>
+                                        <span class="e-role" style="display:block"><%= iv.role %><% if (isPast) { %><span class="e-late">Date passed</span><% } %></span>
+                                    </span>
+
+                                    <span class="pips" role="img" aria-label="<%= doneCount %> of 6 prep items done">
+                                        <% prep.forEach(function (p) { %><i class="<%= p[1] ? 'on' : '' %>"></i><% }); %>
+                                        <b><%= doneCount %>/6</b>
+                                    </span>
+
+                                    <span><span class="pill <%= iv.status.toLowerCase() %>"><%= iv.status %></span></span>
+
+                                    <span class="caret" aria-hidden="true"></span>
+                                </summary>
+
+                                <div class="entry-detail">
+                                    <div>
+                                        <% if (isPast) { %>
+                                            <p class="hint">The date has passed. Mark it complete, or reschedule.</p>
+                                        <% } %>
+                                        <% if (iv.notes && iv.notes.length) { %>
+                                            <p class="notes"><%= iv.notes %></p>
+                                        <% } %>
+                                        <div class="tags">
+                                            <% prep.forEach(function (p) { %>
+                                                <span class="<%= p[1] ? 'on' : 'off' %>"><%= p[0] %></span>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+
+                                    <div class="entry-actions">
+                                        <div class="action-main">
+                                            <% if (iv.status === 'Scheduled') { %>
+                                                <form action="/interviews/<%= iv._id %>/status" method="POST">
+                                                    <input type="hidden" name="status" value="Completed">
+                                                    <button type="submit" class="btn small">Mark complete</button>
+                                                </form>
+                                            <% } else if (iv.status === 'Completed') { %>
+                                                <form action="/interviews/<%= iv._id %>/status" method="POST">
+                                                    <input type="hidden" name="status" value="Selected">
+                                                    <button type="submit" class="btn small">Selected</button>
+                                                </form>
+                                                <form action="/interviews/<%= iv._id %>/status" method="POST">
+                                                    <input type="hidden" name="status" value="Rejected">
+                                                    <button type="submit" class="btn ghost small">Rejected</button>
+                                                </form>
+                                            <% } else { %>
+                                                <form action="/interviews/<%= iv._id %>/status" method="POST">
+                                                    <input type="hidden" name="status" value="Completed">
+                                                    <button type="submit" class="btn ghost small">Undo result</button>
+                                                </form>
+                                            <% } %>
+                                        </div>
+
+                                        <div class="action-links">
+                                            <a href="/edit/<%= iv._id %>" class="linkbtn">Edit</a>
+
+                                            <details class="resched">
+                                                <summary><%= iv.status === 'Scheduled' ? 'Reschedule' : 'Schedule again' %></summary>
+                                                <form action="/interviews/<%= iv._id %>/reschedule" method="POST" class="resched-form">
+                                                    <input type="date" name="interviewDate" value="<%= dateInput %>" required aria-label="New date">
+                                                    <button type="submit" class="btn small">Save</button>
+                                                </form>
+                                            </details>
+
+                                            <% if (rid) { %>
+                                                <a href="/resume/<%= rid %>" class="linkbtn">Practice</a>
+                                            <% } %>
+
+                                            <form action="/delete/<%= iv._id %>" method="POST" class="inline" onsubmit="return confirm('Delete this interview?');">
+                                                <button type="submit" class="linkbtn">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                        </li>
+                    <% } %>
+                <% }); %>
+            </ol>
+        <% } %>
+    </main>
+</div>
+</body>
+</html>

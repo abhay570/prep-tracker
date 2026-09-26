@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Log in — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="auth">
+    <div class="auth-ticket">
+        <div class="ticket-head">
+            <a href="/" class="brand"><span class="brand-mark"></span>Prep Tracker</a>
+        </div>
+        <div class="ticket-body">
+            <form action="/login" method="POST" class="auth-form">
+                <h2>Log in</h2>
+                <p class="lede">Pick up where you left off.</p>
+
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert" role="alert"><%= error %></div>
+                <% } %>
+
+                <div class="field">
+                    <label class="field-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required>
+                </div>
+
+                <button type="submit" class="btn block">Log in</button>
+
+                <p class="switch">New here? <a href="/register">Create an account</a></p>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

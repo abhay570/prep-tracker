@@ -1,0 +1,242 @@
+<%
+    const qs = resume.generatedQuestions || [];
+    const rated = qs.filter(function (q) { return q.reviewed && typeof q.rating === 'number'; });
+    const avg = rated.length ? (rated.reduce(function (s, q) { return s + q.rating; }, 0) / rated.length).toFixed(1) : null;
+    const strong = rated.filter(function (q) { return q.rating >= 8; }).length;
+    const decent = rated.filter(function (q) { return q.rating >= 5 && q.rating < 8; }).length;
+    const weak = rated.filter(function (q) { return q.rating < 5; }).length;
+    const filled = qs.filter(function (q) { return (q.userAnswer || '').trim().length > 0; }).length;
+    const categories = Array.from(new Set(qs.map(function (q) { return q.category || 'General'; })));
+    const verdict = function (r) { return r >= 8 ? 'Strong answer' : (r >= 5 ? 'Decent, can be sharper' : 'Needs work'); };
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Practice questions — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+    <%- include('partials/sidebar', { active: 'resumes' }) %>
+
+    <main class="main">
+        <div class="page-head">
+            <div>
+                <h1>Practice questions</h1>
+                <p>
+                    From <%= resume.fileName %><% if (resume.role) { %> · <%= resume.role %><% } %><% if (resume.company) { %> at <%= resume.company %><% } %>
+                </p>
+            </div>
+            <a href="/resume/upload" class="btn ghost">Upload another resume</a>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+        <% if (typeof notice !== 'undefined' && notice) { %>
+            <div class="notice" role="status"><%= notice %></div>
+        <% } %>
+
+        <% if (resume.generationStatus === 'pending') { %>
+            <div class="empty">
+                <h3>Still writing your questions</h3>
+                <p>This usually takes a few seconds. Refresh the page to check.</p>
+                <a href="/resume/<%= resume._id %>" class="btn ghost">Refresh</a>
+            </div>
+
+        <% } else if (resume.generationStatus === 'failed' || qs.length === 0) { %>
+            <div class="empty">
+                <h3>Couldn't generate questions</h3>
+                <p>The AI service didn't respond properly. Your resume is saved, so you can try again.</p>
+                <form action="/resume/<%= resume._id %>/retry" method="POST">
+                    <button type="submit" class="btn">Try again</button>
+                </form>
+            </div>
+
+        <% } else { %>
+            <div class="qa">
+                <div class="qa-toolbar">
+                    <div class="qa-progress">
+                        <span>Answered <strong id="filledCount"><%= filled %></strong> of <%= qs.length %></span>
+                        <span class="bar"><span id="filledBar" style="width: <%= qs.length ? Math.round((filled / qs.length) * 100) : 0 %>%"></span></span>
+                    </div>
+
+                    <% if (resume.skills && resume.skills.length > 0) { %>
+                        <div class="skills">
+                            <% resume.skills.forEach(function (s) { %><span class="skill"><%= s %></span><% }); %>
+                        </div>
+                    <% } %>
+
+                    <form action="/resume/<%= resume._id %>/more-questions" method="POST" id="moreForm">
+                        <button type="submit" class="btn ghost small" id="moreBtn">Generate 10 more</button>
+                    </form>
+                </div>
+
+                <div class="filters" id="filters" style="margin-bottom: 24px;">
+                    <button type="button" class="active" data-filter="all">All questions</button>
+                    <% categories.forEach(function (c) { %>
+                        <button type="button" data-filter="<%= c %>"><%= c %></button>
+                    <% }); %>
+                    <button type="button" data-filter="__todo">Not answered yet</button>
+                </div>
+
+                <% if (avg !== null) { %>
+                    <div class="summary" id="summary">
+                        <div class="avg"><%= avg %><small> / 10</small></div>
+                        <div>
+                            <h2>Your overall score</h2>
+                            <p>Based on <%= rated.length %> reviewed <%= rated.length === 1 ? 'answer' : 'answers' %>.</p>
+                        </div>
+                        <div class="grades">
+                            <span><b><%= strong %></b>strong</span>
+                            <span><b><%= decent %></b>decent</span>
+                            <span><b><%= weak %></b>need work</span>
+                        </div>
+                    </div>
+                <% } else { %>
+                    <span id="summary"></span>
+                <% } %>
+
+                <form action="/resume/<%= resume._id %>/submit" method="POST" id="answerForm">
+                    <% qs.forEach(function (q) { %>
+                        <article class="q" id="q-<%= q._id %>" data-category="<%= q.category || 'General' %>">
+                            <p class="q-cat"><%= q.category || 'General' %></p>
+                            <h3 class="q-text"><%= q.question %></h3>
+
+                            <div style="margin-top:16px; max-width:720px;">
+                                <textarea name="answers[<%= q._id %>]" placeholder="Type your answer as you'd say it in the interview. Leave blank to skip." aria-label="Your answer"><%= q.userAnswer || '' %></textarea>
+                            </div>
+
+                            <% if (q.reviewed) { %>
+                                <div class="result">
+                                    <% if (typeof q.rating === 'number') { %>
+                                        <div class="score">
+                                            <b><%= q.rating %></b><span>/ 10 · <%= verdict(q.rating) %></span>
+                                        </div>
+                                    <% } %>
+                                    <% if (q.feedback) { %>
+                                        <div class="feedback">
+                                            <h4>Feedback</h4>
+                                            <p><%= q.feedback %></p>
+                                        </div>
+                                    <% } %>
+                                    <% if (q.idealAnswer) { %>
+                                        <div class="ideal">
+                                            <h4>A stronger answer</h4>
+                                            <p><%= q.idealAnswer %></p>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% } %>
+                        </article>
+                    <% }); %>
+
+                    <div class="submit-bar">
+                        <div class="status" id="barStatus" aria-live="polite">
+                            <strong id="barCount"><%= filled %></strong> of <%= qs.length %> answered
+                        </div>
+                        <button type="submit" class="btn" id="submitAll">Submit all answers</button>
+                    </div>
+                </form>
+            </div>
+        <% } %>
+    </main>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('answerForm');
+    if (!form) return;
+
+    var areas = Array.prototype.slice.call(form.querySelectorAll('textarea'));
+    var total = areas.length;
+    var draftKey = 'draft:<%= resume._id %>';
+
+    // ---- Restore unsent drafts (survives a refresh or "generate more") ----
+    try {
+        var saved = JSON.parse(localStorage.getItem(draftKey) || '{}');
+        areas.forEach(function (a) {
+            if (!a.value.trim() && saved[a.name]) a.value = saved[a.name];
+        });
+    } catch (e) {}
+
+    function saveDrafts() {
+        try {
+            var data = {};
+            areas.forEach(function (a) { if (a.value.trim()) data[a.name] = a.value; });
+            localStorage.setItem(draftKey, JSON.stringify(data));
+        } catch (e) {}
+    }
+
+    // ---- Live progress ----
+    var filledCount = document.getElementById('filledCount');
+    var filledBar = document.getElementById('filledBar');
+    var barCount = document.getElementById('barCount');
+
+    function refresh() {
+        var n = areas.filter(function (a) { return a.value.trim().length > 0; }).length;
+        filledCount.textContent = n;
+        barCount.textContent = n;
+        filledBar.style.width = (total ? Math.round((n / total) * 100) : 0) + '%';
+    }
+
+    areas.forEach(function (a) {
+        a.addEventListener('input', function () { refresh(); saveDrafts(); });
+    });
+    refresh();
+
+    // ---- Filters ----
+    var filters = document.getElementById('filters');
+    filters.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-filter]');
+        if (!btn) return;
+        var f = btn.dataset.filter;
+        filters.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+        form.querySelectorAll('.q').forEach(function (q) {
+            var empty = q.querySelector('textarea').value.trim() === '';
+            var show = f === 'all' || (f === '__todo' ? empty : q.dataset.category === f);
+            q.hidden = !show;
+        });
+    });
+
+    // ---- One submit for everything ----
+    var status = document.getElementById('barStatus');
+    var submitBtn = document.getElementById('submitAll');
+
+    form.addEventListener('submit', function (e) {
+        var n = areas.filter(function (a) { return a.value.trim().length > 0; }).length;
+
+        if (n === 0) {
+            e.preventDefault();
+            status.innerHTML = '<span class="warn">Answer at least one question first.</span>';
+            return;
+        }
+
+        try { localStorage.removeItem(draftKey); } catch (err) {}
+
+        setTimeout(function () {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Evaluating your answers...';
+            status.textContent = 'Reviewing ' + n + ' ' + (n === 1 ? 'answer' : 'answers') + '. This can take up to a minute.';
+        }, 0);
+    });
+
+    var moreForm = document.getElementById('moreForm');
+    if (moreForm) {
+        moreForm.addEventListener('submit', function () {
+            var btn = document.getElementById('moreBtn');
+            setTimeout(function () { btn.disabled = true; btn.textContent = 'Generating...'; }, 0);
+        });
+    }
+
+    // Jump to the summary after a review
+    if (location.hash === '#summary') {
+        var s = document.getElementById('summary');
+        if (s && s.scrollIntoView) s.scrollIntoView({ block: 'start' });
+    }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<%
+    const current = typeof active !== 'undefined' ? active : '';
+    const u = (typeof user !== 'undefined' && user) ? user : null;
+    const initial = u && u.name ? u.name.trim().charAt(0).toUpperCase() : '?';
+    const items = [
+        ['dashboard', '/dashboard', 'Interviews', 'Interviews', '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>'],
+        ['add', '/add', 'Add interview', 'Add', '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'],
+        ['upload', '/resume/upload', 'Resume practice', 'Practice', '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 14h6M10 17h4"/>'],
+        ['resumes', '/resume', 'My resumes', 'Resumes', '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>']
+    ];
+%>
+<aside class="sidebar">
+    <a href="/dashboard" class="brand"><span class="brand-mark"></span><span>Prep Tracker</span></a>
+
+    <nav class="nav" aria-label="Main">
+        <% items.forEach(function (it) { %>
+            <a href="<%= it[1] %>" class="<%= current === it[0] ? 'active' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- it[4] %></svg>
+                <span class="l-full"><%= it[2] %></span><span class="l-short"><%= it[3] %></span>
+            </a>
+        <% }); %>
+    </nav>
+
+    <div class="sidebar-foot">
+        <% if (u) { %>
+            <div class="who">
+                <div class="avatar"><%= initial %></div>
+                <div class="who-text">
+                    <strong><%= u.name %></strong>
+                    <span><%= u.email %></span>
+                </div>
+            </div>
+        <% } %>
+        <a href="/logout" class="nav-logout">Log out</a>
+    </div>
+</aside>

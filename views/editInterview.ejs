@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Edit interview — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+    <%- include('partials/sidebar', { active: 'dashboard' }) %>
+
+    <main class="main">
+        <div class="page-head">
+            <div>
+                <h1>Edit interview</h1>
+                <p><%= interview.company %> · <%= interview.role %></p>
+            </div>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+
+        <%- include('partials/interviewForm', { interview: interview, action: '/edit/' + interview._id, submitLabel: 'Save changes' }) %>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<%
+    const iv = (typeof interview !== 'undefined' && interview) ? interview : null;
+    const val = (k) => (iv && iv[k] != null ? iv[k] : '');
+    const dateVal = iv ? new Date(iv.interviewDate).toISOString().split('T')[0] : '';
+    const currentStatus = iv ? iv.status : 'Scheduled';
+    const checklist = [
+        ['resume', 'Resume'],
+        ['dsa', 'DSA'],
+        ['oop', 'OOP'],
+        ['dbms', 'DBMS'],
+        ['sql', 'SQL'],
+        ['hr', 'HR round']
+    ];
+    const done = checklist.filter(([k]) => iv && iv[k]).length;
+    const startPct = Math.round((done / checklist.length) * 100);
+%>
+<form action="<%= action %>" method="POST" class="form-layout" id="interviewForm">
+
+    <div class="readiness-strip">
+        <span class="big-number"><span id="pct"><%= startPct %></span>%</span>
+        <span class="strip-bar">
+            <span class="strip-label">READINESS</span>
+            <span class="bar"><span id="pctBar" style="width: <%= startPct %>%"></span></span>
+        </span>
+    </div>
+
+    <div class="form-block">
+        <div class="fields">
+            <div class="full">
+                <label class="field-label" for="company">Company</label>
+                <input type="text" id="company" name="company" value="<%= val('company') %>" placeholder="e.g. Google" required>
+            </div>
+
+            <div>
+                <label class="field-label" for="role">Role</label>
+                <input type="text" id="role" name="role" value="<%= val('role') %>" placeholder="e.g. SDE-1" required>
+            </div>
+
+            <div>
+                <label class="field-label" for="interviewDate">Interview date</label>
+                <input type="date" id="interviewDate" name="interviewDate" value="<%= dateVal %>" required>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-block">
+        <span class="field-label">Status</span>
+        <div class="segmented" role="radiogroup" aria-label="Status">
+            <% ['Scheduled', 'Completed', 'Selected', 'Rejected'].forEach(function(s) { %>
+                <label class="seg">
+                    <input type="radio" name="status" value="<%= s %>" <%= currentStatus === s ? 'checked' : '' %>>
+                    <%= s %>
+                </label>
+            <% }); %>
+        </div>
+        <p class="help">Pick Scheduled for an upcoming interview. Switch to Completed once it's done.</p>
+    </div>
+
+    <div class="form-block">
+        <span class="field-label">Preparation checklist</span>
+        <div class="chips">
+            <% checklist.forEach(function(item) { %>
+                <label class="chip">
+                    <input type="checkbox" name="<%= item[0] %>" <%= iv && iv[item[0]] ? 'checked' : '' %>>
+                    <%= item[1] %>
+                </label>
+            <% }); %>
+        </div>
+    </div>
+
+    <div class="form-block">
+        <label class="field-label" for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="Interviewer names, topics to revisit, questions to ask them..."><%= val('notes') %></textarea>
+    </div>
+
+    <div class="form-block form-actions">
+        <button type="submit" class="btn"><%= submitLabel %></button>
+        <a href="/dashboard" class="btn ghost">Cancel</a>
+    </div>
+</form>
+
+<script>
+    (function () {
+        var boxes = Array.prototype.slice.call(document.querySelectorAll('.chip input'));
+        var pct = document.getElementById('pct');
+        var bar = document.getElementById('pctBar');
+        function update() {
+            var n = boxes.filter(function (b) { return b.checked; }).length;
+            var p = Math.round((n / boxes.length) * 100);
+            pct.textContent = p;
+            bar.style.width = p + '%';
+        }
+        boxes.forEach(function (b) { b.addEventListener('change', update); });
+    })();
+</script>

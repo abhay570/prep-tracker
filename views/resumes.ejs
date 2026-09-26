@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>My resumes — Prep Tracker</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+    <%- include('partials/sidebar', { active: 'resumes' }) %>
+
+    <main class="main">
+        <div class="page-head">
+            <div>
+                <h1>My resumes</h1>
+                <p>Pick up a practice session where you left off.</p>
+            </div>
+            <a href="/resume/upload" class="btn">Upload resume</a>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert" role="alert"><%= error %></div>
+        <% } %>
+        <% if (typeof notice !== 'undefined' && notice) { %>
+            <div class="notice" role="status"><%= notice %></div>
+        <% } %>
+
+        <% if (resumes.length === 0) { %>
+            <div class="empty">
+                <h3>No resumes yet</h3>
+                <p>Upload a resume to get interview questions based on your own experience.</p>
+                <a href="/resume/upload" class="btn">Upload resume</a>
+            </div>
+        <% } else { %>
+            <div class="manifest-simple">
+                <% resumes.forEach(function (r) {
+                    const total = r.generatedQuestions.length;
+                    const done = r.generatedQuestions.filter(function (q) { return q.reviewed; }).length;
+                    const rated = r.generatedQuestions.filter(function (q) { return typeof q.rating === 'number'; });
+                    const avg = rated.length ? (rated.reduce(function (s, q) { return s + q.rating; }, 0) / rated.length).toFixed(1) : null;
+                %>
+                    <div class="m-row">
+                        <div>
+                            <div class="title"><%= r.fileName %></div>
+                            <div class="sub">Uploaded <%= new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></div>
+                        </div>
+                        <div class="sub">
+                            <%= r.role || 'No target role' %><% if (r.company) { %> · <%= r.company %><% } %>
+                        </div>
+                        <div class="sub">
+                            <% if (r.generationStatus === 'failed') { %>
+                                Questions failed to generate
+                            <% } else { %>
+                                <%= done %> of <%= total %> answered<% if (avg) { %> · avg <%= avg %>/10<% } %>
+                            <% } %>
+                        </div>
+                        <div class="end">
+                            <a href="/resume/<%= r._id %>" class="btn small">Open</a>
+                            <form action="/resume/<%= r._id %>/delete" method="POST" onsubmit="return confirm('Delete this resume and its questions?');">
+                                <button type="submit" class="linkbtn">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </main>
+</div>
+</body>
+</html>
